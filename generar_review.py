@@ -809,7 +809,7 @@ document.getElementById("pdfCancelBtn").addEventListener("click", () => {
 });
 
 document.getElementById("downloadPdfBtn").addEventListener("click", () => {
-  generarPDF(productos, "catalogo-rumar-casa.pdf", "Catálogo");
+  generarPDF(productos, "catalogo.pdf", "Catálogo");
 });
 document.getElementById("downloadSectionPdfBtn").addEventListener("click", () => {
   const heading = document.querySelector(".cat-heading h2");
