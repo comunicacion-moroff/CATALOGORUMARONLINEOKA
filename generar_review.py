@@ -80,8 +80,37 @@ HTML = """<!doctype html>
 
   #homeView.hidden, #categoryView.hidden { display: none; }
 
+  /* ---------- Portada: secciones grandes tipo catálogo (foto + texto encima) ---------- */
+  .home-hero {
+    max-width: 1440px; margin: 0 auto; padding: 48px 40px 100px;
+    display: grid; grid-template-columns: 2fr 1fr; grid-auto-rows: 200px; gap: 20px;
+  }
+  .home-hero a.hero-tile {
+    position: relative; display: block; border-radius: 3px; overflow: hidden; cursor: pointer;
+    text-decoration: none; color: #fff; background: #cabfa9;
+  }
+  .home-hero a.hero-tile.big { grid-row: 1 / span 3; }
+  .home-hero a.hero-tile img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform .7s cubic-bezier(.2,.7,.3,1);
+  }
+  .home-hero a.hero-tile:hover img { transform: scale(1.045); }
+  .home-hero a.hero-tile .scrim {
+    position: absolute; inset: 0; background: linear-gradient(to top, rgba(15,13,10,.62) 0%, rgba(15,13,10,0) 58%);
+  }
+  .home-hero a.hero-tile .label {
+    position: absolute; left: 26px; bottom: 22px; right: 26px; z-index: 1;
+    font-family: "Cormorant Garamond", serif; font-weight: 500; font-style: italic;
+    font-size: 24px; letter-spacing: .03em;
+  }
+  .home-hero a.hero-tile.big .label { font-size: 44px; }
+  @media (max-width: 800px) {
+    .home-hero { grid-template-columns: 1fr; grid-auto-rows: 240px; }
+    .home-hero a.hero-tile.big { grid-row: auto; }
+  }
+
   .homegrid {
-    max-width: 1440px; margin: 0 auto; padding: 88px 40px 140px;
+    max-width: 1440px; margin: 0 auto; padding: 20px 40px 100px;
     display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 84px 48px;
   }
@@ -245,7 +274,7 @@ HTML = """<!doctype html>
 <nav class="catnav" id="catnav"></nav>
 
 <div id="homeView">
-  <div class="homegrid" id="homegrid"></div>
+  <div class="home-hero" id="homeHero"></div>
 </div>
 
 <div id="categoryView" class="hidden">
@@ -292,11 +321,19 @@ function titleCase(s) {
   return (s || "").toLowerCase().replace(/(^|\\s)\\S/g, c => c.toUpperCase());
 }
 
-const homegrid = document.getElementById("homegrid");
+const homeHero = document.getElementById("homeHero");
 const catnav = document.getElementById("catnav");
 const homeView = document.getElementById("homeView");
 const categoryView = document.getElementById("categoryView");
 const categoryContent = document.getElementById("categoryContent");
+
+// ---- Secciones grandes del catálogo (agrupan una o más categorías) ----
+const SECCIONES = [
+  { id: "sofas", nombre: "Sofás", categorias: ["SOFÁS"], grande: true },
+  { id: "sillas-banquetas", nombre: "Sillas y Banquetas", categorias: ["SILLAS", "BANQUETAS"], grande: false },
+  { id: "complementos", nombre: "Complementos", categorias: ["COMPLEMENTOS"], grande: false },
+  { id: "respaldos", nombre: "Respaldos", categorias: ["RESPALDOS"], grande: false },
+];
 
 const grupos = [];
 const idx = new Map();
@@ -309,44 +346,62 @@ productos.forEach(p => {
   idx.get(key).items.push(p);
 });
 
-const catOrder = [];
-const catSeen = new Set();
-grupos.forEach(g => { if (!catSeen.has(g.categoria)) { catSeen.add(g.categoria); catOrder.push(g.categoria); } });
-
 const state = {};
 let activeCardId = null;
-
-// ---- Tiles de portada: una por categoria+subcategoria ----
-grupos.forEach(g => {
-  const rep = g.items[0];
-  const title = g.subcategoria ? titleCase(g.subcategoria) : titleCase(g.categoria);
-  const subtitle = g.subcategoria ? titleCase(g.categoria) : "";
-  const a = document.createElement("a");
-  a.className = "tile";
-  a.innerHTML = `
-    <img src="${rep.foto_ambientacion}" loading="lazy" alt="${title}">
-    <div class="cap">
-      <div class="t1">${title}</div>
-      <div class="t2">${subtitle}</div>
-    </div>
-  `;
-  a.addEventListener("click", (e) => { e.preventDefault(); enterCategory(g.categoria, g.subcategoria); });
-  homegrid.appendChild(a);
-});
-
-// ---- Nav superior: una por categoria (agrupa todas sus subcategorias) ----
-catOrder.forEach(c => {
-  const a = document.createElement("a");
-  a.textContent = c;
-  a.addEventListener("click", () => enterCategory(c, null));
-  catnav.appendChild(a);
-});
-
 let currentCategoryItems = [];
 
 function groupSlug(categoria, subcategoria) {
   return slugify(categoria) + (subcategoria ? "-" + slugify(subcategoria) : "");
 }
+
+function seccionItems(sec) {
+  return productos.filter(p => sec.categorias.includes(p.categoria));
+}
+
+function seccionSubtiles(sec) {
+  const seen = new Set();
+  const tiles = [];
+  seccionItems(sec).forEach(p => {
+    const key = p.categoria + "||" + p.subcategoria;
+    if (seen.has(key)) return;
+    seen.add(key);
+    tiles.push({ categoria: p.categoria, subcategoria: p.subcategoria });
+  });
+  return tiles;
+}
+
+function seccionEsFlat(sec) {
+  const tiles = seccionSubtiles(sec);
+  return tiles.length <= 1;
+}
+
+function findSeccionForCategoria(categoria) {
+  return SECCIONES.find(s => s.categorias.includes(categoria)) || null;
+}
+
+// ---- Portada: una tile grande + tiles chicas, con texto sobre la foto ----
+SECCIONES.forEach(sec => {
+  const items = seccionItems(sec);
+  if (!items.length) return;
+  const rep = items[0];
+  const a = document.createElement("a");
+  a.className = "hero-tile" + (sec.grande ? " big" : "");
+  a.innerHTML = `
+    <img src="${rep.foto_ambientacion}" loading="lazy" alt="${sec.nombre}">
+    <div class="scrim"></div>
+    <div class="label">${sec.nombre}</div>
+  `;
+  a.addEventListener("click", (e) => { e.preventDefault(); enterSeccion(sec); });
+  homeHero.appendChild(a);
+});
+
+// ---- Nav superior: una por sección ----
+SECCIONES.forEach(sec => {
+  const a = document.createElement("a");
+  a.textContent = sec.nombre;
+  a.addEventListener("click", () => enterSeccion(sec));
+  catnav.appendChild(a);
+});
 
 function goHome(pushHistory = true) {
   categoryView.classList.add("hidden");
@@ -357,7 +412,7 @@ function goHome(pushHistory = true) {
 }
 document.getElementById("homeLink").addEventListener("click", () => goHome());
 
-function renderBreadcrumb(categoria, subcategoria) {
+function renderBreadcrumb(sec, categoria, subcategoria) {
   const bc = document.getElementById("breadcrumb");
   bc.innerHTML = "";
 
@@ -365,7 +420,10 @@ function renderBreadcrumb(categoria, subcategoria) {
   back.className = "back-arrow";
   back.textContent = "←";
   back.title = "Volver";
-  back.addEventListener("click", () => subcategoria ? enterCategory(categoria, null) : goHome());
+  back.addEventListener("click", () => {
+    if (categoria != null && sec && !seccionEsFlat(sec)) enterSeccion(sec);
+    else goHome();
+  });
   bc.appendChild(back);
 
   const home = document.createElement("a");
@@ -373,34 +431,84 @@ function renderBreadcrumb(categoria, subcategoria) {
   home.addEventListener("click", () => goHome());
   bc.appendChild(home);
 
-  const sep1 = document.createElement("span");
-  sep1.className = "sep"; sep1.textContent = "/";
-  bc.appendChild(sep1);
+  const addSep = () => {
+    const s = document.createElement("span");
+    s.className = "sep"; s.textContent = "/";
+    bc.appendChild(s);
+  };
 
-  if (subcategoria) {
-    const catLink = document.createElement("a");
-    catLink.textContent = titleCase(categoria);
-    catLink.addEventListener("click", () => enterCategory(categoria, null));
-    bc.appendChild(catLink);
-    const sep2 = document.createElement("span");
-    sep2.className = "sep"; sep2.textContent = "/";
-    bc.appendChild(sep2);
+  if (categoria == null) {
+    addSep();
     const cur = document.createElement("span");
-    cur.className = "current"; cur.textContent = titleCase(subcategoria);
+    cur.className = "current"; cur.textContent = sec.nombre;
     bc.appendChild(cur);
-  } else {
-    const cur = document.createElement("span");
-    cur.className = "current"; cur.textContent = titleCase(categoria);
-    bc.appendChild(cur);
+    return;
   }
+
+  if (sec && !seccionEsFlat(sec)) {
+    addSep();
+    const secLink = document.createElement("a");
+    secLink.textContent = sec.nombre;
+    secLink.addEventListener("click", () => enterSeccion(sec));
+    bc.appendChild(secLink);
+  }
+  addSep();
+  const cur = document.createElement("span");
+  cur.className = "current";
+  cur.textContent = subcategoria ? titleCase(subcategoria) : titleCase(categoria);
+  bc.appendChild(cur);
 }
 
-function enterCategory(categoria, subcategoria, pushHistory = true) {
+function enterSeccion(sec, pushHistory = true) {
+  const subtiles = seccionSubtiles(sec);
+  if (subtiles.length <= 1) {
+    const only = subtiles[0];
+    enterCategory(only ? only.categoria : sec.categorias[0], only ? (only.subcategoria || null) : null, pushHistory, sec);
+    return;
+  }
+
+  currentCategoryItems = seccionItems(sec);
+  renderBreadcrumb(sec, null, null);
+
+  categoryContent.innerHTML = "";
+  const section = document.createElement("section");
+  section.className = "cat-section";
+  section.innerHTML = `
+    <div class="cat-heading"><h2 class="serif">${sec.nombre}</h2><div class="count">${currentCategoryItems.length} productos</div></div>
+  `;
+  categoryContent.appendChild(section);
+
+  const grid = document.createElement("div");
+  grid.className = "homegrid";
+  grid.style.padding = "0";
+  section.appendChild(grid);
+
+  subtiles.forEach(t => {
+    const groupItems = seccionItems(sec).filter(p => p.categoria === t.categoria && p.subcategoria === t.subcategoria);
+    const rep = groupItems[0];
+    const title = t.subcategoria ? titleCase(t.subcategoria) : titleCase(t.categoria);
+    const a = document.createElement("a");
+    a.className = "tile";
+    a.innerHTML = `<img src="${rep.foto_ambientacion}" loading="lazy" alt="${title}"><div class="cap"><div class="t1">${title}</div></div>`;
+    a.addEventListener("click", (e) => { e.preventDefault(); enterCategory(t.categoria, t.subcategoria || null, true, sec); });
+    grid.appendChild(a);
+  });
+
+  if (pushHistory) history.pushState({ seccionId: sec.id }, "", "#" + sec.id);
+
+  homeView.classList.add("hidden");
+  categoryView.classList.remove("hidden");
+  categoryView.classList.remove("fade-in"); void categoryView.offsetWidth; categoryView.classList.add("fade-in");
+  window.scrollTo(0, 0);
+}
+
+function enterCategory(categoria, subcategoria, pushHistory = true, sec = null) {
+  if (!sec) sec = findSeccionForCategoria(categoria);
   const catGroups = grupos.filter(g => g.categoria === categoria && (subcategoria == null || g.subcategoria === subcategoria));
   const total = catGroups.reduce((n, g) => n + g.items.length, 0);
   currentCategoryItems = catGroups.flatMap(g => g.items);
 
-  renderBreadcrumb(categoria, subcategoria);
+  renderBreadcrumb(sec, categoria, subcategoria);
 
   categoryContent.innerHTML = "";
   const section = document.createElement("section");
@@ -411,7 +519,7 @@ function enterCategory(categoria, subcategoria, pushHistory = true) {
   categoryContent.appendChild(section);
 
   if (pushHistory) {
-    history.pushState({ categoria, subcategoria }, "", "#" + groupSlug(categoria, subcategoria));
+    history.pushState({ categoria, subcategoria, seccionId: sec ? sec.id : null }, "", "#" + groupSlug(categoria, subcategoria));
   }
 
   catGroups.forEach(g => {
@@ -449,23 +557,24 @@ function enterCategory(categoria, subcategoria, pushHistory = true) {
 
 window.addEventListener("popstate", (e) => {
   const st = e.state;
-  if (!st || st.home) {
-    goHome(false);
-  } else {
-    enterCategory(st.categoria, st.subcategoria, false);
+  if (!st || st.home) { goHome(false); return; }
+  if (st.seccionId && !st.categoria) {
+    const sec = SECCIONES.find(s => s.id === st.seccionId);
+    if (sec) enterSeccion(sec, false);
+    return;
   }
+  const sec = st.seccionId ? SECCIONES.find(s => s.id === st.seccionId) : null;
+  enterCategory(st.categoria, st.subcategoria, false, sec);
 });
 
 (function initFromHash() {
   const hash = location.hash.replace(/^#/, "");
   if (!hash) return;
+  const sec = SECCIONES.find(s => s.id === hash);
+  if (sec) { enterSeccion(sec, false); return; }
   for (const g of grupos) {
     if (groupSlug(g.categoria, g.subcategoria) === hash) {
       enterCategory(g.categoria, g.subcategoria, false);
-      return;
-    }
-    if (slugify(g.categoria) === hash) {
-      enterCategory(g.categoria, null, false);
       return;
     }
   }
