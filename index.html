@@ -40,9 +40,12 @@
   }
   header.util .stats {
     margin-left: auto; font-size: 11px; color: var(--muted);
-    display: flex; align-items: center; gap: 22px; letter-spacing: .04em;
+    display: flex; align-items: center; gap: 18px; letter-spacing: .04em;
   }
-  header.util .stats b { color: var(--ink); font-weight: 600; }
+  header.util .chk {
+    display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;
+  }
+  header.util .chk input { accent-color: var(--ink); cursor: pointer; }
   header.util button {
     background: var(--ink); color: var(--cream); border: 1px solid var(--ink);
     font-family: "Inter", sans-serif; padding: 11px 24px; border-radius: 100px; font-size: 11px;
@@ -90,9 +93,11 @@
   }
 
   .breadcrumb {
-    max-width: 1360px; margin: 0 auto; padding: 26px 32px 0;
+    position: sticky; top: 114px; z-index: 20;
+    background: var(--cream); margin: 0 auto; padding: 16px 32px;
     font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
-    display: flex; align-items: center; gap: 10px;
+    display: flex; align-items: center; gap: 10px; justify-content: center;
+    border-bottom: 1px solid var(--line-soft);
   }
   .breadcrumb a { color: var(--muted); text-decoration: none; cursor: pointer; transition: color .15s ease; }
   .breadcrumb a:hover { color: var(--terracotta); }
@@ -196,6 +201,19 @@
     align-items: center; justify-content: center; cursor: pointer; font-size: 15px; color: #c9c2b4;
   }
   .modal .m-photo .stamp.on { background: var(--terracotta); color: #fff; border-color: var(--terracotta); }
+  .modal .nav-arrow {
+    position: fixed; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; z-index: 2; color: #fff;
+    transition: background .15s ease;
+  }
+  .modal .nav-arrow:hover { background: rgba(255,255,255,.18); }
+  .modal .nav-arrow.prev { left: 28px; }
+  .modal .nav-arrow.next { right: 28px; }
+  .modal .nav-arrow.hidden { display: none; }
+  .modal .dots { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
+  .modal .dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.35); cursor: pointer; }
+  .modal .dots .dot.on { background: #fff; }
   footer.pagefoot {
     text-align: center; padding: 50px 20px 60px; color: var(--muted); font-size: 10px;
     opacity: .55; max-width: 560px; margin: 0 auto; line-height: 1.6;
@@ -210,7 +228,7 @@
 <header class="util">
   <span class="label" id="homeLink">Catálogo</span>
   <div class="stats">
-    <span><b id="reviewedCount">0</b> / <span id="totalCount">0</span> revisados</span>
+    <label class="chk"><input type="checkbox" id="incluirNombres" checked> Incluir nombres</label>
     <button id="downloadPdfBtn">Descargar catálogo (PDF)</button>
   </div>
 </header>
@@ -233,6 +251,7 @@
 </footer>
 
 <div class="modal-backdrop" id="modalBackdrop">
+  <div class="nav-arrow prev hidden" id="mPrev">‹</div>
   <div class="modal" id="modal">
     <div class="close" id="modalClose">✕</div>
     <div class="m-photo">
@@ -240,6 +259,8 @@
       <div class="stamp" id="mStamp" title="Marcar como aprobado">✓</div>
     </div>
   </div>
+  <div class="nav-arrow next hidden" id="mNext">›</div>
+  <div class="dots" id="mDots"></div>
 </div>
 
 <div class="pdf-overlay" id="pdfOverlay">
@@ -250,7 +271,7 @@
 </div>
 
 <script>
-const productos = [{"id": "ghost", "nombre": "GHOST", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/ghost.jpeg", "iconos_extra": [], "pagina_origen_pdf": 1, "fotos_adicionales": []}, {"id": "texas", "nombre": "TEXAS", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes3/texas.jpeg", "iconos_extra": [], "pagina_origen_pdf": 2, "fotos_adicionales": []}, {"id": "napoles", "nombre": "NAPOLES", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/napoles.png", "iconos_extra": [], "pagina_origen_pdf": 3, "fotos_adicionales": []}, {"id": "chester", "nombre": "CHESTER", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/chester.png", "iconos_extra": [], "pagina_origen_pdf": 4, "fotos_adicionales": []}, {"id": "kairos", "nombre": "KAIROS", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/kairos.png", "iconos_extra": [], "pagina_origen_pdf": 5, "fotos_adicionales": []}, {"id": "san-francisco", "nombre": "SAN FRANCISCO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco.png", "iconos_extra": [], "pagina_origen_pdf": 6, "fotos_adicionales": []}, {"id": "austin", "nombre": "AUSTIN", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/austin.jpeg", "iconos_extra": [], "pagina_origen_pdf": 7, "fotos_adicionales": []}, {"id": "idaho", "nombre": "IDAHO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/idaho.png", "iconos_extra": [], "pagina_origen_pdf": 8, "fotos_adicionales": []}, {"id": "san-francisco-2", "nombre": "SAN FRANCISCO", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-2.jpeg", "iconos_extra": [], "pagina_origen_pdf": 10, "fotos_adicionales": []}, {"id": "ghost-2", "nombre": "GHOST", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-2.png", "iconos_extra": [], "pagina_origen_pdf": 11, "fotos_adicionales": []}, {"id": "boston", "nombre": "BOSTON", "tag_variante": "Mecanismo", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes2/mecanismo.png", "iconos_extra": [], "pagina_origen_pdf": 12, "fotos_adicionales": ["imagenes2/pagina-13.png"]}, {"id": "ghost-3", "nombre": "GHOST", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-3.png", "iconos_extra": [], "pagina_origen_pdf": 14, "fotos_adicionales": ["imagenes2/pagina-15.jpeg"]}, {"id": "chicago", "nombre": "CHICAGO", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes1/chicago.png", "iconos_extra": [], "pagina_origen_pdf": 17, "fotos_adicionales": []}, {"id": "san-francisco-3", "nombre": "SAN FRANCISCO", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-3.jpeg", "iconos_extra": [], "pagina_origen_pdf": 18, "fotos_adicionales": []}, {"id": "ghost-4", "nombre": "GHOST", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-4.png", "iconos_extra": [], "pagina_origen_pdf": 19, "fotos_adicionales": []}, {"id": "san-francisco-4", "nombre": "SAN FRANCISCO", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-4.png", "iconos_extra": [], "pagina_origen_pdf": 21, "fotos_adicionales": []}, {"id": "ghost-5", "nombre": "GHOST", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-5.png", "iconos_extra": [], "pagina_origen_pdf": 22, "fotos_adicionales": []}, {"id": "chester-2", "nombre": "CHESTER", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/chester-2.png", "iconos_extra": [], "pagina_origen_pdf": 23, "fotos_adicionales": []}, {"id": "chicago-2", "nombre": "CHICAGO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/chicago-2.png", "iconos_extra": [], "pagina_origen_pdf": 24, "fotos_adicionales": []}, {"id": "kairos-2", "nombre": "KAIROS", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes2/kairos-2.png", "iconos_extra": [], "pagina_origen_pdf": 25, "fotos_adicionales": []}, {"id": "napoles-2", "nombre": "NAPOLES", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes2/napoles-2.png", "iconos_extra": [], "pagina_origen_pdf": 26, "fotos_adicionales": []}, {"id": "austin-2", "nombre": "AUSTIN", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/austin-2.png", "iconos_extra": [], "pagina_origen_pdf": 27, "fotos_adicionales": []}, {"id": "nexa", "nombre": "NEXA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes2/nexa.png", "iconos_extra": [], "pagina_origen_pdf": 29, "fotos_adicionales": []}, {"id": "montana", "nombre": "MONTANA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes2/montana.png", "iconos_extra": [], "pagina_origen_pdf": 30, "fotos_adicionales": []}, {"id": "vita", "nombre": "VITA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes3/vita.png", "iconos_extra": [], "pagina_origen_pdf": 31, "fotos_adicionales": []}, {"id": "restoration", "nombre": "RESTORATION", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes3/restoration.png", "iconos_extra": [], "pagina_origen_pdf": 32, "fotos_adicionales": []}, {"id": "san-diego", "nombre": "SAN DIEGO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes3/san-diego.png", "iconos_extra": [], "pagina_origen_pdf": 34, "fotos_adicionales": []}, {"id": "napoles-3", "nombre": "NAPOLES", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes2/napoles-3.png", "iconos_extra": [], "pagina_origen_pdf": 35, "fotos_adicionales": []}, {"id": "san-francisco-5", "nombre": "SAN FRANCISCO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-5.png", "iconos_extra": [], "pagina_origen_pdf": 36, "fotos_adicionales": []}, {"id": "seal", "nombre": "SEAL", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/seal.png", "iconos_extra": [], "pagina_origen_pdf": 38, "fotos_adicionales": []}, {"id": "dragon-fly", "nombre": "DRAGON FLY", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/dragon-fly.png", "iconos_extra": [], "pagina_origen_pdf": 39, "fotos_adicionales": []}, {"id": "pacha", "nombre": "PACHA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/pacha.png", "iconos_extra": [], "pagina_origen_pdf": 40, "fotos_adicionales": []}, {"id": "gh", "nombre": "GH", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh.png", "iconos_extra": [], "pagina_origen_pdf": 41, "fotos_adicionales": []}, {"id": "betu", "nombre": "BETU", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/betu.png", "iconos_extra": [], "pagina_origen_pdf": 42, "fotos_adicionales": []}, {"id": "mor", "nombre": "MOR", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/mor.png", "iconos_extra": [], "pagina_origen_pdf": 43, "fotos_adicionales": []}, {"id": "vincenzo", "nombre": "VINCENZO", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/vincenzo.png", "iconos_extra": [], "pagina_origen_pdf": 44, "fotos_adicionales": []}, {"id": "zeya", "nombre": "ZEYA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zeya.png", "iconos_extra": [], "pagina_origen_pdf": 45, "fotos_adicionales": []}, {"id": "sante", "nombre": "SANTÉ", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/sante.png", "iconos_extra": [], "pagina_origen_pdf": 46, "fotos_adicionales": []}, {"id": "xl-con-puff", "nombre": "XL CON PUFF", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/xl-con-puff-icono1.png", "iconos_extra": [], "pagina_origen_pdf": 47, "fotos_adicionales": []}, {"id": "salta", "nombre": "SALTA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/salta.png", "iconos_extra": [], "pagina_origen_pdf": 48, "fotos_adicionales": []}, {"id": "lerax", "nombre": "LERAX", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/lerax-icono1.png", "iconos_extra": [], "pagina_origen_pdf": 49, "fotos_adicionales": []}, {"id": "gh-2", "nombre": "GH", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh-2.png", "iconos_extra": [], "pagina_origen_pdf": 51, "fotos_adicionales": []}, {"id": "grace", "nombre": "GRACE", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/grace.png", "iconos_extra": [], "pagina_origen_pdf": 52, "fotos_adicionales": []}, {"id": "pompeya", "nombre": "POMPEYA", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/pompeya.png", "iconos_extra": [], "pagina_origen_pdf": 53, "fotos_adicionales": []}, {"id": "zambia", "nombre": "ZAMBIA", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zambia.png", "iconos_extra": [], "pagina_origen_pdf": 55, "fotos_adicionales": []}, {"id": "zambia-2", "nombre": "ZAMBIA", "tag_variante": "C/APOYABRAZOS", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zambia-2.png", "iconos_extra": [], "pagina_origen_pdf": 56, "fotos_adicionales": []}, {"id": "monze", "nombre": "MONZE", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/monze.png", "iconos_extra": [], "pagina_origen_pdf": 57, "fotos_adicionales": []}, {"id": "melandra", "nombre": "MELANDRA", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/melandra.png", "iconos_extra": [], "pagina_origen_pdf": 58, "fotos_adicionales": []}, {"id": "mali", "nombre": "MALI", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/mali.png", "iconos_extra": [], "pagina_origen_pdf": 59, "fotos_adicionales": []}, {"id": "grace-2", "nombre": "GRACE", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/grace-2.png", "iconos_extra": [], "pagina_origen_pdf": 60, "fotos_adicionales": []}, {"id": "gh-3", "nombre": "GH", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh-3.png", "iconos_extra": [], "pagina_origen_pdf": 61, "fotos_adicionales": []}, {"id": "griego", "nombre": "GRIEGO", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/griego.png", "iconos_extra": [], "pagina_origen_pdf": 63, "fotos_adicionales": []}, {"id": "aleman", "nombre": "ALEMÁN", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/aleman.png", "iconos_extra": [], "pagina_origen_pdf": 64, "fotos_adicionales": []}, {"id": "canneloni", "nombre": "CANNELONI", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/canneloni.png", "iconos_extra": [], "pagina_origen_pdf": 65, "fotos_adicionales": []}, {"id": "frances", "nombre": "FRANCÉS", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/frances.png", "iconos_extra": [], "pagina_origen_pdf": 66, "fotos_adicionales": []}, {"id": "persa", "nombre": "PERSA", "tag_variante": "Ghost · Sofá", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-6.png", "iconos_extra": [], "pagina_origen_pdf": 67, "fotos_adicionales": []}, {"id": "aleman-2", "nombre": "ALEMÁN", "tag_variante": "C/FUNDA", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/aleman-2.png", "iconos_extra": [], "pagina_origen_pdf": 68, "fotos_adicionales": []}];
+const productos = [{"id": "ghost", "nombre": "GHOST", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/ghost.jpeg", "iconos_extra": [], "pagina_origen_pdf": 1, "fotos_adicionales": []}, {"id": "texas", "nombre": "TEXAS", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes3/texas.jpeg", "iconos_extra": [], "pagina_origen_pdf": 2, "fotos_adicionales": []}, {"id": "napoles", "nombre": "NAPOLES", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/napoles.png", "iconos_extra": [], "pagina_origen_pdf": 3, "fotos_adicionales": []}, {"id": "chester", "nombre": "CHESTER", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/chester.png", "iconos_extra": [], "pagina_origen_pdf": 4, "fotos_adicionales": []}, {"id": "kairos", "nombre": "KAIROS", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/kairos.png", "iconos_extra": [], "pagina_origen_pdf": 5, "fotos_adicionales": []}, {"id": "san-francisco", "nombre": "SAN FRANCISCO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco.png", "iconos_extra": [], "pagina_origen_pdf": 6, "fotos_adicionales": []}, {"id": "austin", "nombre": "AUSTIN", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes1/austin.jpeg", "iconos_extra": [], "pagina_origen_pdf": 7, "fotos_adicionales": []}, {"id": "idaho", "nombre": "IDAHO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "estándar", "descripcion": "", "foto_ambientacion": "imagenes2/idaho.png", "iconos_extra": [], "pagina_origen_pdf": 8, "fotos_adicionales": []}, {"id": "san-francisco-2", "nombre": "SAN FRANCISCO", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-2.jpeg", "iconos_extra": [], "pagina_origen_pdf": 10, "fotos_adicionales": []}, {"id": "ghost-2", "nombre": "GHOST", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-2.png", "iconos_extra": [], "pagina_origen_pdf": 11, "fotos_adicionales": []}, {"id": "boston", "nombre": "BOSTON", "tag_variante": "Mecanismo", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes2/boston.png", "iconos_extra": [], "pagina_origen_pdf": 12, "fotos_adicionales": ["imagenes2/boston-mecanismo.png"]}, {"id": "ghost-3", "nombre": "GHOST", "tag_variante": "CARRICAMA", "categoria": "SOFÁS", "subcategoria": "carricama", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-3.png", "iconos_extra": [], "pagina_origen_pdf": 14, "fotos_adicionales": ["imagenes2/pagina-15.jpeg"]}, {"id": "chicago", "nombre": "CHICAGO", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes1/chicago.png", "iconos_extra": [], "pagina_origen_pdf": 17, "fotos_adicionales": []}, {"id": "san-francisco-3", "nombre": "SAN FRANCISCO", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-3.jpeg", "iconos_extra": [], "pagina_origen_pdf": 18, "fotos_adicionales": []}, {"id": "ghost-4", "nombre": "GHOST", "tag_variante": "C/FUNDA", "categoria": "SOFÁS", "subcategoria": "con funda", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-4.png", "iconos_extra": [], "pagina_origen_pdf": 19, "fotos_adicionales": []}, {"id": "san-francisco-4", "nombre": "SAN FRANCISCO", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-4.png", "iconos_extra": [], "pagina_origen_pdf": 21, "fotos_adicionales": []}, {"id": "ghost-5", "nombre": "GHOST", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-5.png", "iconos_extra": [], "pagina_origen_pdf": 22, "fotos_adicionales": []}, {"id": "chester-2", "nombre": "CHESTER", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/chester-2.png", "iconos_extra": [], "pagina_origen_pdf": 23, "fotos_adicionales": []}, {"id": "chicago-2", "nombre": "CHICAGO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/chicago-2.png", "iconos_extra": [], "pagina_origen_pdf": 24, "fotos_adicionales": []}, {"id": "kairos-2", "nombre": "KAIROS", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes2/kairos-2.png", "iconos_extra": [], "pagina_origen_pdf": 25, "fotos_adicionales": []}, {"id": "napoles-2", "nombre": "NAPOLES", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes2/napoles-2.png", "iconos_extra": [], "pagina_origen_pdf": 26, "fotos_adicionales": []}, {"id": "austin-2", "nombre": "AUSTIN", "tag_variante": "UN CUERPO", "categoria": "SOFÁS", "subcategoria": "individuales", "descripcion": "", "foto_ambientacion": "imagenes1/austin-2.png", "iconos_extra": [], "pagina_origen_pdf": 27, "fotos_adicionales": []}, {"id": "nexa", "nombre": "NEXA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes2/nexa.png", "iconos_extra": [], "pagina_origen_pdf": 29, "fotos_adicionales": []}, {"id": "montana", "nombre": "MONTANA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes2/montana.png", "iconos_extra": [], "pagina_origen_pdf": 30, "fotos_adicionales": []}, {"id": "vita", "nombre": "VITA", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes3/vita.png", "iconos_extra": [], "pagina_origen_pdf": 31, "fotos_adicionales": []}, {"id": "restoration", "nombre": "RESTORATION", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "modulados", "descripcion": "", "foto_ambientacion": "imagenes3/restoration.png", "iconos_extra": [], "pagina_origen_pdf": 32, "fotos_adicionales": []}, {"id": "san-diego", "nombre": "SAN DIEGO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes3/san-diego.png", "iconos_extra": [], "pagina_origen_pdf": 34, "fotos_adicionales": []}, {"id": "napoles-3", "nombre": "NAPOLES", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes2/napoles-3.png", "iconos_extra": [], "pagina_origen_pdf": 35, "fotos_adicionales": []}, {"id": "san-francisco-5", "nombre": "SAN FRANCISCO", "tag_variante": "", "categoria": "SOFÁS", "subcategoria": "esquineros", "descripcion": "", "foto_ambientacion": "imagenes3/san-francisco-5.png", "iconos_extra": [], "pagina_origen_pdf": 36, "fotos_adicionales": []}, {"id": "seal", "nombre": "SEAL", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/seal.png", "iconos_extra": [], "pagina_origen_pdf": 38, "fotos_adicionales": []}, {"id": "dragon-fly", "nombre": "DRAGON FLY", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/dragon-fly.png", "iconos_extra": [], "pagina_origen_pdf": 39, "fotos_adicionales": []}, {"id": "pacha", "nombre": "PACHA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/pacha.png", "iconos_extra": [], "pagina_origen_pdf": 40, "fotos_adicionales": []}, {"id": "gh", "nombre": "GH", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh.png", "iconos_extra": [], "pagina_origen_pdf": 41, "fotos_adicionales": []}, {"id": "betu", "nombre": "BETU", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/betu.png", "iconos_extra": [], "pagina_origen_pdf": 42, "fotos_adicionales": []}, {"id": "mor", "nombre": "MOR", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/mor.png", "iconos_extra": [], "pagina_origen_pdf": 43, "fotos_adicionales": []}, {"id": "vincenzo", "nombre": "VINCENZO", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/vincenzo.png", "iconos_extra": [], "pagina_origen_pdf": 44, "fotos_adicionales": []}, {"id": "zeya", "nombre": "ZEYA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zeya.png", "iconos_extra": [], "pagina_origen_pdf": 45, "fotos_adicionales": []}, {"id": "sante", "nombre": "SANTÉ", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/sante.png", "iconos_extra": [], "pagina_origen_pdf": 46, "fotos_adicionales": []}, {"id": "xl-con-puff", "nombre": "XL CON PUFF", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/xl-con-puff.png", "iconos_extra": [], "pagina_origen_pdf": 47, "fotos_adicionales": []}, {"id": "salta", "nombre": "SALTA", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/salta.png", "iconos_extra": [], "pagina_origen_pdf": 48, "fotos_adicionales": []}, {"id": "lerax", "nombre": "LERAX", "tag_variante": "", "categoria": "COMPLEMENTOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/lerax-icono1.png", "iconos_extra": [], "pagina_origen_pdf": 49, "fotos_adicionales": []}, {"id": "gh-2", "nombre": "GH", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh-2.png", "iconos_extra": [], "pagina_origen_pdf": 51, "fotos_adicionales": []}, {"id": "grace", "nombre": "GRACE", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/grace.png", "iconos_extra": [], "pagina_origen_pdf": 52, "fotos_adicionales": []}, {"id": "pompeya", "nombre": "POMPEYA", "tag_variante": "", "categoria": "BANQUETAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/pompeya.png", "iconos_extra": [], "pagina_origen_pdf": 53, "fotos_adicionales": []}, {"id": "zambia", "nombre": "ZAMBIA", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zambia.png", "iconos_extra": [], "pagina_origen_pdf": 55, "fotos_adicionales": []}, {"id": "zambia-2", "nombre": "ZAMBIA", "tag_variante": "C/APOYABRAZOS", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes3/zambia-2.png", "iconos_extra": [], "pagina_origen_pdf": 56, "fotos_adicionales": []}, {"id": "monze", "nombre": "MONZE", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/monze.png", "iconos_extra": [], "pagina_origen_pdf": 57, "fotos_adicionales": []}, {"id": "melandra", "nombre": "MELANDRA", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/melandra.png", "iconos_extra": [], "pagina_origen_pdf": 58, "fotos_adicionales": []}, {"id": "mali", "nombre": "MALI", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/mali.png", "iconos_extra": [], "pagina_origen_pdf": 59, "fotos_adicionales": []}, {"id": "grace-2", "nombre": "GRACE", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/grace-2.png", "iconos_extra": [], "pagina_origen_pdf": 60, "fotos_adicionales": []}, {"id": "gh-3", "nombre": "GH", "tag_variante": "", "categoria": "SILLAS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/gh-3.png", "iconos_extra": [], "pagina_origen_pdf": 61, "fotos_adicionales": []}, {"id": "griego", "nombre": "GRIEGO", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes2/griego.png", "iconos_extra": [], "pagina_origen_pdf": 63, "fotos_adicionales": []}, {"id": "aleman", "nombre": "ALEMÁN", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/aleman.png", "iconos_extra": [], "pagina_origen_pdf": 64, "fotos_adicionales": []}, {"id": "canneloni", "nombre": "CANNELONI", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/canneloni.png", "iconos_extra": [], "pagina_origen_pdf": 65, "fotos_adicionales": []}, {"id": "frances", "nombre": "FRANCÉS", "tag_variante": "", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/frances.png", "iconos_extra": [], "pagina_origen_pdf": 66, "fotos_adicionales": []}, {"id": "persa", "nombre": "PERSA", "tag_variante": "Ghost · Sofá", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/ghost-6.png", "iconos_extra": [], "pagina_origen_pdf": 67, "fotos_adicionales": []}, {"id": "aleman-2", "nombre": "ALEMÁN", "tag_variante": "C/FUNDA", "categoria": "RESPALDOS", "subcategoria": "", "descripcion": "", "foto_ambientacion": "imagenes1/aleman-2.png", "iconos_extra": [], "pagina_origen_pdf": 68, "fotos_adicionales": []}];
 
 function slugify(s) {
   return (s || "")
@@ -440,10 +461,34 @@ window.addEventListener("popstate", (e) => {
   }
 })();
 
+let modalFotos = [];
+let modalFotoIndex = 0;
+
+function renderModalFoto() {
+  document.getElementById("mPhoto").src = modalFotos[modalFotoIndex];
+  const prev = document.getElementById("mPrev");
+  const next = document.getElementById("mNext");
+  const multi = modalFotos.length > 1;
+  prev.classList.toggle("hidden", !multi);
+  next.classList.toggle("hidden", !multi);
+  const dots = document.getElementById("mDots");
+  dots.innerHTML = "";
+  if (multi) {
+    modalFotos.forEach((_, i) => {
+      const d = document.createElement("div");
+      d.className = "dot" + (i === modalFotoIndex ? " on" : "");
+      d.addEventListener("click", () => { modalFotoIndex = i; renderModalFoto(); });
+      dots.appendChild(d);
+    });
+  }
+}
+
 function openModal(cardId) {
   activeCardId = cardId;
   const s = state[cardId];
-  document.getElementById("mPhoto").src = s.foto_ambientacion;
+  modalFotos = [s.foto_ambientacion, ...(s.fotos_adicionales || [])];
+  modalFotoIndex = 0;
+  renderModalFoto();
   const stamp = document.getElementById("mStamp");
   stamp.classList.toggle("on", !!s.revisado);
   document.getElementById("modalBackdrop").classList.add("open");
@@ -452,25 +497,34 @@ function closeModal() {
   document.getElementById("modalBackdrop").classList.remove("open");
   activeCardId = null;
 }
+function modalPrev() {
+  if (!modalFotos.length) return;
+  modalFotoIndex = (modalFotoIndex - 1 + modalFotos.length) % modalFotos.length;
+  renderModalFoto();
+}
+function modalNext() {
+  if (!modalFotos.length) return;
+  modalFotoIndex = (modalFotoIndex + 1) % modalFotos.length;
+  renderModalFoto();
+}
+document.getElementById("mPrev").addEventListener("click", modalPrev);
+document.getElementById("mNext").addEventListener("click", modalNext);
 document.getElementById("modalClose").addEventListener("click", closeModal);
 document.getElementById("modalBackdrop").addEventListener("click", (e) => {
   if (e.target.id === "modalBackdrop") closeModal();
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+document.addEventListener("keydown", (e) => {
+  if (!document.getElementById("modalBackdrop").classList.contains("open")) return;
+  if (e.key === "Escape") closeModal();
+  if (e.key === "ArrowLeft") modalPrev();
+  if (e.key === "ArrowRight") modalNext();
+});
 
 document.getElementById("mStamp").addEventListener("click", () => {
   if (!activeCardId) return;
   state[activeCardId].revisado = !state[activeCardId].revisado;
   document.getElementById("mStamp").classList.toggle("on", state[activeCardId].revisado);
-  updateStats();
 });
-
-function updateStats() {
-  const vals = Object.values(state);
-  document.getElementById("totalCount").textContent = vals.length;
-  document.getElementById("reviewedCount").textContent = vals.filter(v => v.revisado).length;
-}
-updateStats();
 
 // ---- Descarga del catálogo en PDF (liviano: cada foto se reescala antes de incrustarla) ----
 // A prueba de fallos: cualquier error (imagen que no carga, canvas bloqueado por el
@@ -578,6 +632,8 @@ async function generarPDF(lista, filename, titulo) {
     doc.setFontSize(36);
     doc.text(titulo, pageW / 2, pageH / 2, { align: "center" });
 
+    const incluirNombres = document.getElementById("incluirNombres").checked;
+
     for (let i = 0; i < lista.length; i++) {
       if (pdfCancelado) { cerrarOverlayPDF(); return; }
       const p = lista[i];
@@ -585,29 +641,38 @@ async function generarPDF(lista, filename, titulo) {
       doc.addPage();
       doc.setFillColor(245, 241, 234);
       doc.rect(0, 0, pageW, pageH, "F");
+
+      // texto arriba de la foto (si "incluir nombres" está tildado)
+      let topMargin = 16;
+      if (incluirNombres) {
+        let yText = 24;
+        if (p.subcategoria || p.categoria) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.setTextColor(154, 146, 132);
+          doc.text((p.subcategoria || p.categoria).toUpperCase(), pageW / 2, yText, { align: "center" });
+          yText += 9;
+        }
+        doc.setFont("times", "bold");
+        doc.setFontSize(19);
+        doc.setTextColor(23, 20, 15);
+        doc.text((p.nombre || "").toUpperCase(), pageW / 2, yText, { align: "center" });
+        topMargin = yText + 10;
+      }
+
       try {
         const { dataUrl, w, h } = await cargarImagenComoJPEG(p.foto_ambientacion, 1500, 0.82);
         if (pdfCancelado) { cerrarOverlayPDF(); return; }
-        const maxW = pageW - 50, maxH = pageH - 55;
+        const maxW = pageW - 50, maxH = pageH - topMargin - 16;
         const scale = Math.min(maxW / w, maxH / h);
         const finalW = w * scale, finalH = h * scale;
         const x = (pageW - finalW) / 2;
-        const y = 16 + (maxH - finalH) / 2;
+        const y = topMargin + (maxH - finalH) / 2;
         const formato = /^data:image\/png/i.test(dataUrl) ? "PNG" : "JPEG";
         doc.addImage(dataUrl, formato, x, y, finalW, finalH);
       } catch (e) {
         // si una foto puntual falla (o tarda demasiado), seguimos con el resto del catálogo
       }
-      if (p.subcategoria || p.categoria) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(154, 146, 132);
-        doc.text((p.subcategoria || p.categoria).toUpperCase(), pageW / 2, pageH - 20, { align: "center" });
-      }
-      doc.setFont("times", "bold");
-      doc.setFontSize(19);
-      doc.setTextColor(23, 20, 15);
-      doc.text((p.nombre || "").toUpperCase(), pageW / 2, pageH - 11, { align: "center" });
     }
 
     if (pdfCancelado) { cerrarOverlayPDF(); return; }
