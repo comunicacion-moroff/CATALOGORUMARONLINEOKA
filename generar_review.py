@@ -6,13 +6,23 @@ BASE = Path(__file__).parent
 productos = json.loads((BASE / "productos.json").read_text(encoding="utf-8"))
 divisores = json.loads((BASE / "divisores.json").read_text(encoding="utf-8"))
 
+# Subcategoría "clásicos": modelos destacados que se muestran primero dentro de Sofás
+# (siguen apareciendo también en su subcategoría original).
+CLASICOS = ["san-francisco", "san-diego", "ghost", "texas"]
+por_id = {p["id"]: p for p in productos}
+clasicos = [
+    dict(por_id[i], id=i + "-clasico", subcategoria="clásicos", destacado=True)
+    for i in CLASICOS
+]
+productos = clasicos + productos
+
 data_json = json.dumps(productos, ensure_ascii=False)
 
 HTML = """<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Catálogo</title>
+<title>Rumar Casa · Catálogo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -42,6 +52,10 @@ HTML = """<!doctype html>
     border-bottom: 1px solid var(--line-soft);
     padding: 20px 40px;
     display: flex; align-items: center; gap: 24px;
+  }
+  header.util .logo {
+    height: 34px; width: auto; display: block; cursor: pointer;
+    filter: brightness(0); /* el logo es blanco: lo pasamos a negro sobre el fondo crema */
   }
   header.util .label {
     font-family: "Cormorant Garamond", serif; font-style: italic; font-weight: 500;
@@ -204,7 +218,12 @@ HTML = """<!doctype html>
     gap: 56px 44px; margin-top: 50px;
   }
   .card { cursor: pointer; }
-  .card .frame { aspect-ratio: 3 / 2; overflow: hidden; }
+  .card .frame { aspect-ratio: 3 / 2; overflow: hidden; position: relative; }
+  .card .frame .badge {
+    position: absolute; top: 14px; left: 14px; z-index: 1;
+    background: var(--terracotta); color: #fff; padding: 6px 12px; border-radius: 100px;
+    font-size: 10px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500;
+  }
   .card .frame img.photo {
     width: 100%; height: 100%; object-fit: cover; object-position: center;
     display: block; transition: transform .6s cubic-bezier(.2,.7,.3,1);
@@ -261,11 +280,38 @@ HTML = """<!doctype html>
     display: block; font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
     margin-bottom: 8px; color: var(--muted);
   }
+
+  /* ---------- Popup "Seguinos en Instagram" ---------- */
+  .ig-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 150; background: rgba(23,20,15,.55);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  .ig-backdrop.open { display: flex; animation: fadeIn .35s ease; }
+  .ig-pop {
+    background: #fff; width: 100%; max-width: 400px; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.35);
+  }
+  .ig-pop .ig-head {
+    display: flex; align-items: center; justify-content: space-between; padding: 18px 20px;
+  }
+  .ig-pop .ig-head h3 { margin: 0; font-size: 19px; font-weight: 500; }
+  .ig-pop .ig-close {
+    background: none; border: 0; font-size: 22px; line-height: 1; cursor: pointer; color: var(--ink); padding: 4px;
+  }
+  .ig-pop img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+  .ig-pop .ig-body { padding: 20px; background: var(--cream); }
+  .ig-pop .ig-body p { margin: 0 0 18px; font-size: 15px; line-height: 1.55; }
+  .ig-pop .ig-btn {
+    display: inline-block; background: #1fa463; color: #fff; text-decoration: none;
+    padding: 11px 16px; border-radius: 3px; font-size: 12px; font-weight: 500;
+    letter-spacing: .04em; text-transform: uppercase; transition: background .15s ease;
+  }
+  .ig-pop .ig-btn:hover { background: #178a52; }
 </style>
 </head>
 <body>
 <header class="util">
-  <span class="label" id="homeLink">Catálogo</span>
+  <img class="logo" id="homeLink" src="logo-rumar.png" alt="Rumar Casa">
   <div class="stats">
     <label class="chk"><input type="checkbox" id="incluirNombres" checked> Incluir nombres</label>
     <button id="downloadPdfBtn">Descargar catálogo (PDF)</button>
@@ -300,6 +346,20 @@ HTML = """<!doctype html>
   </div>
   <div class="nav-arrow next hidden" id="mNext">›</div>
   <div class="dots" id="mDots"></div>
+</div>
+
+<div class="ig-backdrop" id="igBackdrop">
+  <div class="ig-pop" role="dialog" aria-labelledby="igTitle">
+    <div class="ig-head">
+      <h3 id="igTitle">¡Seguinos en Instagram!</h3>
+      <button class="ig-close" id="igClose" aria-label="Cerrar">✕</button>
+    </div>
+    <img src="imagenes1/aleman.webp" alt="Rumar Casa">
+    <div class="ig-body">
+      <p>Conocé las últimas novedades, promociones, ingresos, procesos de fabricación y nuestros mejores consejos de decoración.</p>
+      <a class="ig-btn" id="igBtn" href="https://www.instagram.com/rumarcasa/" target="_blank" rel="noopener">Ver Rumar Casa en Instagram</a>
+    </div>
+  </div>
 </div>
 
 <div class="pdf-overlay" id="pdfOverlay">
@@ -383,7 +443,7 @@ function findSeccionForCategoria(categoria) {
 SECCIONES.forEach(sec => {
   const items = seccionItems(sec);
   if (!items.length) return;
-  const rep = items[0];
+  const rep = items.find(p => !p.destacado) || items[0];
   const a = document.createElement("a");
   a.className = "hero-tile" + (sec.grande ? " big" : "");
   a.innerHTML = `
@@ -427,7 +487,7 @@ function renderBreadcrumb(sec, categoria, subcategoria) {
   bc.appendChild(back);
 
   const home = document.createElement("a");
-  home.textContent = "Catálogo";
+  home.textContent = "Rumar Casa";
   home.addEventListener("click", () => goHome());
   bc.appendChild(home);
 
@@ -467,7 +527,7 @@ function enterSeccion(sec, pushHistory = true) {
     return;
   }
 
-  currentCategoryItems = seccionItems(sec);
+  currentCategoryItems = seccionItems(sec).filter(p => !p.destacado);
   renderBreadcrumb(sec, null, null);
 
   categoryContent.innerHTML = "";
@@ -541,7 +601,7 @@ function enterCategory(categoria, subcategoria, pushHistory = true, sec = null) 
       const card = document.createElement("div");
       card.className = "card";
       card.innerHTML = `
-        <div class="frame"><img class="photo" src="${p.foto_ambientacion}" loading="lazy" alt="${(p.nombre||"").replace(/"/g,'&quot;')}"></div>
+        <div class="frame">${p.destacado ? '<span class="badge">Destacado</span>' : ''}<img class="photo" src="${p.foto_ambientacion}" loading="lazy" alt="${(p.nombre||"").replace(/"/g,'&quot;')}"></div>
         <div class="name" id="${cardId}_name">${state[cardId].nombre || ""}</div>
       `;
       card.addEventListener("click", () => openModal(cardId));
@@ -809,13 +869,32 @@ document.getElementById("pdfCancelBtn").addEventListener("click", () => {
 });
 
 document.getElementById("downloadPdfBtn").addEventListener("click", () => {
-  generarPDF(productos, "catalogo.pdf", "Catálogo");
+  generarPDF(productos.filter(p => !p.destacado), "catalogo-rumar-casa.pdf", "Rumar Casa");
 });
 document.getElementById("downloadSectionPdfBtn").addEventListener("click", () => {
   const heading = document.querySelector(".cat-heading h2");
   const titulo = heading ? heading.textContent : "Catálogo";
   generarPDF(currentCategoryItems, `catalogo-${slugify(titulo)}.pdf`, titulo);
 });
+
+// ---- Popup de Instagram: aparece una vez por visita, a los pocos segundos ----
+(function igPopup() {
+  const bd = document.getElementById("igBackdrop");
+  let visto = false;
+  try { visto = sessionStorage.getItem("igPopupVisto") === "1"; } catch (e) {}
+  if (visto) return;
+  const cerrar = () => {
+    bd.classList.remove("open");
+    try { sessionStorage.setItem("igPopupVisto", "1"); } catch (e) {}
+  };
+  document.getElementById("igClose").addEventListener("click", cerrar);
+  document.getElementById("igBtn").addEventListener("click", cerrar);
+  bd.addEventListener("click", (e) => { if (e.target === bd) cerrar(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && bd.classList.contains("open")) cerrar(); });
+  setTimeout(() => {
+    if (!document.getElementById("modalBackdrop").classList.contains("open")) bd.classList.add("open");
+  }, 4000);
+})();
 </script>
 </body>
 </html>
